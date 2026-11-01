@@ -1,63 +1,192 @@
 # SolarSizer AI
 
-**Right-size your solar. Kill the generator bill.**
+**Plan a solar system around your appliances and your petrol bill.**
 
-Live app: https://solarsizer-ai.vercel.app
+SolarSizer AI helps Nigerian shop owners and households estimate the inverter, battery and solar panels they need, understand the upfront cost, and compare it with running a petrol generator. Describe your appliances in plain language or enter them manually, choose your city, and review an editable estimate before speaking to an installer.
 
-Global Energy Hackathon 2026. Track 2, Digital Solutions & AI. Brief 7, Replace diesel for productive use.
+[Live demo](https://solarsizer-ai.vercel.app) · [Project summary](docs/one-page-summary.md) · [Demo walkthrough](docs/demo-script.md)
 
-## Problem
+Built for **Global Energy Hackathon 2026**, Track 2: Digital Solutions & AI, with a focus on Brief 7: replacing diesel for productive use. The current implementation models **petrol generator** costs and emissions.
 
-Millions of Nigerian homes and shops run petrol generators because the grid fails daily. Solar is the answer, but buying it is guesswork: installers quote wildly different systems, undersized systems die before midnight, oversized ones waste money, and nobody shows when the system pays for itself.
+## The problem
 
-## How it works
+For a provision shop, barber, tailor or household relying on a generator, moving to solar raises practical questions: What equipment will power these appliances? How much will it cost? How does that compare with the fuel bill?
 
-1. **AI parse.** You describe what you own in plain words ("1 freezer, 2 standing fans, a TV and 6 bulbs"). An LLM on the NVIDIA API turns that into an appliance list (watts, hours, quantity, motor). You can edit every row.
-2. **Sizing engine.** Pure TypeScript, unit-tested. The AI never does the math.
-3. **Sun data.** Annual peak sun hours for your city from NASA POWER, so Kano and Lagos get different panel counts.
-4. **Price and payback.** System cost from a local price table, compared with your weekly petrol spend to get the payback month.
-5. **Brief 7 impact.** Litres of petrol and tonnes of CO2 avoided per year (2.31 kg CO2 per litre), yearly petrol saving, 5-year net saving.
-6. **Affordability.** Monthly payment with example pay-as-you-go terms (10% deposit, 24% a year, 24 months), next to today's petrol bill.
-7. **Low connectivity.** Share the result on WhatsApp as plain text. Works offline after the first visit (service worker); enter appliances by hand without the AI.
+SolarSizer brings those estimates into one workflow. AI reads the appliance description; TypeScript functions calculate the system size, price and savings.
 
-Free for shops and homes. The business model: installers and pay-as-you-go providers pay per qualified sizing request.
+## Features
 
-Submission drafts: `docs/one-page-summary.md`, `docs/pitch-deck-outline.md`, `docs/demo-script.md`, `docs/disclosure.md`. Prior work and sprint work: `CHANGELOG.md`.
+- **Editable appliance lists:** AI extracts wattages, daily usage hours, quantities and motor loads from descriptions such as “1 freezer, 2 standing fans, a TV and 6 bulbs.” Every value can be corrected manually.
+- **Solar sizing:** estimates inverter capacity, battery storage and the number of 550 W panels, allowing for motor startup surge and system losses.
+- **Location-based sunshine:** requests annual average solar irradiance from NASA POWER, with labelled city estimates when the request fails.
+- **Cost breakdown:** shows inverter, battery, panels and installation estimates in Nigerian naira.
+- **Payback and impact:** compares solar cost with petrol spending and estimates annual petrol savings, litres and CO₂ avoided, and five-year net savings.
+- **Illustrative monthly payments:** compares example financing payments with the monthly petrol bill.
+- **WhatsApp sharing:** generates a plain-text system summary to copy or send to an installer.
+- **Manual and offline use:** manual entry works without an AI key. In production, the cached app supports manual sizing after an initial online visit; AI parsing still needs internet access.
 
-### Formulas
+Supported cities: **Lagos, Abuja, Kano, Port Harcourt, Ibadan, Enugu, Kaduna and Maiduguri**.
 
-| Value | Formula |
-|-------|---------|
-| Daily energy | Σ watts × hours × qty |
-| Inverter | max(peak W × 1.25, surge W ÷ 2) ÷ 0.8 power factor, rounded up to a standard kVA |
-| Surge | motor loads (fridges, freezers, pumps, AC) count 3× |
-| Battery | daily Wh × 0.5 night share ÷ (0.8 depth of discharge × 0.9 efficiency), rounded up to a standard kWh |
-| Panels | daily Wh ÷ (sun hours × 0.75 derate) ÷ 550 W, rounded up |
-| Payback | total cost ÷ (weekly fuel × 52 ÷ 12), in months |
+## How to use it
 
-## Data sources and credits
+1. Open the app and select **Fill in an example shop**, or describe your own appliances.
+2. Choose a city and enter your weekly petrol spending in naira.
+3. Select **Size my system**, or choose **Enter appliances by hand** to skip AI parsing.
+4. Correct the appliance table to match your equipment ratings and daily usage.
+5. Review the system, cost and savings estimates. Adjust the petrol price per litre, then copy or share the result for a quote.
 
-- **AI:** `nvidia/nemotron-3.5-lightning-30b-a3b` (default, thinking off) via NVIDIA API Catalog (build.nvidia.com), OpenAI-compatible endpoint. Meta Llama models are geo-blocked in Nigeria; run `node scripts/check-models.mjs` to see which models answer from your location, then set `NVIDIA_MODEL`.
-- **Sun hours:** NASA POWER climatology API, parameter `ALLSKY_SFC_SW_DWN` (annual mean). Falls back to an approximate value per city if NASA is unreachable, labelled "estimate".
-- **Prices:** `lib/prices.json`. Placeholder Lagos retail estimates; replace with researched prices and their date before demo.
+## Example result
+
+The sizing test fixture uses a 150 W freezer for 10 hours, two 70 W fans for 10 hours, a 100 W TV for 6 hours, and six 10 W bulbs for 6 hours. At **4.5 peak sun hours**, the current code and price table produce:
+
+| Output | Estimate |
+| --- | --- |
+| Daily energy demand | 3.86 kWh |
+| Inverter | 1 kVA |
+| Battery | 5 kWh |
+| Solar panels | 3 × 550 W, or 1.65 kWp |
+| Total system cost | ₦2,430,000 |
+| Payback at ₦25,000 petrol spending per week | 23 months |
+| Annual petrol spending displaced | ₦1,300,000 |
+| Petrol avoided at ₦1,000 per litre | 1,300 litres per year |
+| Modelled emissions avoided | About 3.0 tonnes CO₂ per year |
+
+This example uses placeholder equipment prices and assumes full replacement of generator petrol. AI-inferred appliance values and live sunshine data can produce different results.
+
+## How the estimates work
+
+The AI extracts appliance data and Zod validates the response. Electrical and financial calculations run separately in [lib/sizing.ts](lib/sizing.ts), [lib/pricing.ts](lib/pricing.ts) and [lib/impact.ts](lib/impact.ts).
+
+| Calculation | Current model |
+| --- | --- |
+| Daily energy | Sum of watts × daily hours × quantity, in Wh |
+| Peak load | Sum of watts × quantity, assuming simultaneous use |
+| Startup surge | Motor appliances count at 3× rated power; other appliances count at 1× |
+| Inverter | max(peak W × 1.25, surge W ÷ 2) ÷ 0.8 ÷ 1,000, rounded up to a supported kVA size |
+| Battery | Daily Wh × 0.5 night share ÷ (0.8 depth of discharge × 0.9 efficiency) ÷ 1,000, rounded up to a supported kWh size |
+| Panel count | Daily Wh ÷ (peak sun hours × 0.75 derate × 550 W), rounded up |
+| Payback | System cost ÷ (weekly petrol spending × 52 ÷ 12), rounded up to whole months |
+| Annual petrol avoided | Weekly petrol spending × 52 ÷ petrol price per litre |
+| Annual CO₂ avoided | Annual litres × 2.31 kg CO₂ per litre ÷ 1,000 |
+| Five-year net savings | Five years of petrol spending − upfront system cost |
+
+The illustrative financing model uses a **10% deposit, 24% annual interest and a 24-month term**. It is an example, not a financing offer.
+
+## Technology
+
+| Area | Implementation |
+| --- | --- |
+| Web app | Next.js App Router, React, TypeScript and Tailwind CSS |
+| Appliance parsing | NVIDIA's OpenAI-compatible API, the `openai` client and Zod validation |
+| Sunshine data | NASA POWER climatology parameter `ALLSKY_SFC_SW_DWN`, with local fallback values |
+| Offline support | Service worker and web app manifest |
+| Checks | Vitest unit tests and Python Playwright browser scripts |
 
 ## Run locally
 
+Install Node.js with npm, then clone this repository:
+
 ```bash
-npm install
-cp .env.example .env.local   # then paste your NVIDIA key into .env.local
-npm run dev                  # http://localhost:3000
-npm test                     # unit tests
-python e2e/test_landing.py   # browser tests (dev server on :3023, needs Playwright)
-python e2e/test_offline.py   # offline tests (production server on :3025)
+git clone https://github.com/MgbokinyiChidubem/globalEnergyHackathon.git
+cd globalEnergyHackathon
+npm ci
 ```
 
-Get a free NVIDIA key at https://build.nvidia.com (sign in, open a model page, "Get API Key"). Keys start with `nvapi-`. Never commit `.env.local`.
+For AI parsing, copy `.env.example` to `.env.local`:
 
-## Deploy
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env.local
+```
 
-Import the repo on Vercel and set the environment variable `NVIDIA_API_KEY`. Optional: `NVIDIA_MODEL` to switch models.
+```bash
+# macOS / Linux
+cp .env.example .env.local
+```
 
-## Limits
+Set `NVIDIA_API_KEY` in `.env.local` to a key from [NVIDIA API Catalog](https://build.nvidia.com). Keep this file private; it is excluded from Git. You can skip this step to use manual appliance entry.
 
-Prices and sizes are estimates for planning, not an installer's quote. The free NVIDIA tier is rate-limited (about 40 requests per minute reported by developers); the app makes one AI call per "Size my system" click.
+| Environment variable | Purpose | Default |
+| --- | --- | --- |
+| `NVIDIA_API_KEY` | Server-side credential for AI parsing | Required only for AI parsing |
+| `NVIDIA_MODEL` | Override the app's model | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| `NVIDIA_TIMEOUT_MS` | Timeout for each AI request, in milliseconds | `30000` |
+
+The commented model in `.env.example` is an optional override; the app's default is defined in [lib/nvidia.ts](lib/nvidia.ts). After configuring the key, `node scripts/check-models.mjs` checks candidate models from your environment.
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Open [localhost:3000](http://localhost:3000). For a production build, including service-worker registration:
+
+```bash
+npm run build
+npm start
+```
+
+## Validation
+
+```bash
+npm test
+npm run lint
+```
+
+Unit tests cover sizing, pricing, parsing, sunshine handling and related behaviour. Browser checks require Python and Playwright:
+
+```bash
+python -m pip install playwright
+python -m playwright install chromium
+```
+
+With a development server running, pass its URL explicitly:
+
+```bash
+python e2e/test_landing.py http://localhost:3000
+```
+
+The landing script exercises live AI and sunshine integrations, so configure the NVIDIA key and network access. For the offline check, run a **production** server with `npm run build` followed by `npm start`, then:
+
+```bash
+python e2e/test_offline.py http://localhost:3000
+```
+
+## Deployment
+
+Import this repository into Vercel as a Next.js project. Set `NVIDIA_API_KEY` in the deployment environment to enable AI parsing; optionally set `NVIDIA_MODEL` and `NVIDIA_TIMEOUT_MS`. Build with `npm run build`.
+
+The app needs server-side API routes for AI parsing and NASA lookups. Offline support registers only in production and requires a browser context that supports service workers, such as HTTPS or localhost.
+
+## Repository structure
+
+| Path | Contents |
+| --- | --- |
+| [`app/`](app/) | Pages, layout, styles, manifest and API routes |
+| [`components/`](components/) | Sizing form, appliance editor, results, chart and service-worker registration |
+| [`lib/`](lib/) | Sizing, pricing, impact, parsing, location data and unit tests |
+| [`lib/prices.json`](lib/prices.json) | Editable naira equipment price table |
+| [`public/sw.js`](public/sw.js) | Production offline caching logic |
+| [`e2e/`](e2e/) | Landing-page and offline browser checks |
+| [`scripts/check-models.mjs`](scripts/check-models.mjs) | NVIDIA model availability check |
+| [`docs/`](docs/) | Project summary, demo script, pitch outline and disclosure |
+
+## Assumptions and limitations
+
+- Equipment prices are placeholder Lagos estimates and have not been validated against installer quotes. Replace them with sourced, dated prices before making a purchase decision.
+- Sizing uses annual average sunshine, fixed loss factors and a 50% night-use assumption. It does not model roof shading, seasonal performance, wiring or a site-specific installation design.
+- Savings assume solar fully replaces the entered petrol spending. Maintenance, battery replacement and financing costs are excluded from simple payback and five-year savings.
+- AI can infer incorrect wattages or usage hours. Check the editable table against appliance ratings and actual usage.
+- Offline use depends on previously cached production assets. AI parsing and fresh NASA data require internet access; city estimates support offline sizing.
+- The app currently supports the listed Nigerian cities and NGN pricing. Impact figures are modelled estimates, not measured pilot outcomes.
+
+## Project documents and disclosure
+
+- [One-page project summary](docs/one-page-summary.md)
+- [Pitch deck outline](docs/pitch-deck-outline.md)
+- [Demo walkthrough](docs/demo-script.md)
+- [Prior work, AI tools and data disclosure](docs/disclosure.md)
+- [Development changelog](CHANGELOG.md)
+
+The summary and submission documents include draft assumptions and items still to confirm. The disclosure and changelog describe the source project's development history; historical tag references in those documents refer to the source repository and are not present in this repository's fresh import history.
