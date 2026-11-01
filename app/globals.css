@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* Night is the default scope. `.day` re-points the same tokens, so components render in either. */
+@theme {
+  --color-night: #121a3a;
+  --color-deep: #0a1030;
+  --color-amber: #ffc23c;
+  --color-sun: #ff7a2f;
+  --color-paper: #fff7ea;
+  --color-ink: #1b1f33;
+  --color-foreground: #f6f3ec;
+  --color-muted: #aeb6cf;
+  --color-panel: #1a2350;
+  --color-field: #10173a;
+  --color-line: #2e3a72;
+  --color-ok: #3ddc97;
+  --color-bad: #ff6b6f;
+  --color-gen: #ff6b6f;
+  --color-solar: #3ddc97;
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-sans: var(--font-atkinson), system-ui, sans-serif;
+  --font-mono: var(--font-atkinson), system-ui, sans-serif;
+}
+
+.day {
+  --color-foreground: #1b1f33;
+  --color-muted: #5f5a4f;
+  --color-panel: #ffffff;
+  --color-field: #fffdf8;
+  --color-line: #ead9bd;
+  --color-ok: #178a5c;
+  --color-bad: #d93a3f;
+  --color-gen: #d93a3f;
+  --color-solar: #178a5c;
+  --color-amber: #b86a00;
+  background: var(--color-paper);
+  color: var(--color-foreground);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--color-deep);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+input, select, textarea {
+  background: var(--color-field);
+  border: 1.5px solid var(--color-line);
+  border-radius: 12px;
+  color: var(--color-foreground);
+}
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--color-muted) 75%, transparent); }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--color-sun);
+  outline-offset: 2px;
+}
+
+/* The one orchestrated motion: the sun rises behind the rooftops once. */
+.sun {
+  background: radial-gradient(circle, #fff1b8 0%, #ffc23c 28%, rgba(255, 122, 47, 0.55) 46%, rgba(255, 122, 47, 0) 68%);
+  animation: sunrise 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+@keyframes sunrise {
+  from { transform: translateY(55%); opacity: 0.2; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sun { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* Atkinson's slashed zero suits code, not money: numbers use the display face. */
+dt, dd, input[type="number"], .num { font-family: var(--font-display); }

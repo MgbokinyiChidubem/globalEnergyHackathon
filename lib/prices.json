@@ -1,0 +1,7 @@
+{
+  "currency": "NGN",
+  "inverterPerKVA": 250000,
+  "batteryPerKWh": 300000,
+  "panel550W": 160000,
+  "installFlat": 200000
+}
