@@ -4,7 +4,9 @@
 
 SolarSizer AI helps Nigerian shop owners and households estimate the inverter, battery and solar panels they need, understand the upfront cost, and compare it with running a petrol generator. Describe your appliances in plain language or enter them manually, choose your city, and review an editable estimate before speaking to an installer.
 
-[Live demo](https://solarsizer-ai.vercel.app) · [Project summary](docs/one-page-summary.md) · [Demo walkthrough](docs/demo-script.md)
+**Live deployment:** [https://solarsizer-ai.vercel.app/](https://solarsizer-ai.vercel.app/)
+
+[Project summary](docs/one-page-summary.md) · [Demo walkthrough](docs/demo-script.md)
 
 Built for **Global Energy Hackathon 2026**, Track 2: Digital Solutions & AI, with a focus on Brief 7: replacing diesel for productive use. The current implementation models **petrol generator** costs and emissions.
 
